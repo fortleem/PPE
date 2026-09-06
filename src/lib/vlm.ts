@@ -1,8 +1,8 @@
 // Backend-only wrappers around z-ai-web-dev-sdk (VLM + LLM)
-import fs from "fs/promises";
 import sharp from "sharp";
 import ZAI from "z-ai-web-dev-sdk";
 import { MODE_CONFIG, type ExperimentMode } from "./ppe";
+import { readImageBuffer } from "./imageStore";
 
 const RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 90_000, 150_000];
 
@@ -30,18 +30,35 @@ async function retryWithBackoff<T>(
 // Cached SDK instance (backend only — never import from client components)
 let zaiPromise: Promise<Awaited<ReturnType<typeof ZAI.create>>> | null = null;
 export async function getZAI() {
-  if (!zaiPromise) zaiPromise = ZAI.create();
+  if (!zaiPromise) {
+    zaiPromise = (async () => {
+      // On serverless runtimes the SDK config file can't be committed with the repo,
+      // so we materialize the ZAI_CONFIG_JSON env var into the writable /tmp home.
+      const envConfig = process.env.ZAI_CONFIG_JSON;
+      if (envConfig && process.env.VERCEL) {
+        try {
+          process.env.HOME = "/tmp";
+          const { writeFile, mkdir } = await import("fs/promises");
+          await mkdir("/tmp", { recursive: true });
+          await writeFile("/tmp/.z-ai-config", envConfig);
+        } catch {
+          /* fall through to the file-based lookup */
+        }
+      }
+      return ZAI.create();
+    })();
+  }
   return zaiPromise;
 }
 
 export async function imageToDataUrl(filePath: string): Promise<string> {
-  const buf = await fs.readFile(filePath);
+  const buf = await readImageBuffer(filePath);
   return `data:image/jpeg;base64,${buf.toString("base64")}`;
 }
 
 /** Smaller version for in-context example images (reduces request payload). */
 export async function imageToDataUrlSmall(filePath: string): Promise<string> {
-  const buf = await fs.readFile(filePath);
+  const buf = await readImageBuffer(filePath);
   const small = await sharp(buf)
     .flatten({ background: "#ffffff" })
     .resize(640, 640, { fit: "inside", withoutEnlargement: true })

@@ -26,6 +26,9 @@ model DatasetImage {
   width        Int?
   height       Int?
   size         Int?
+  // Serverless fallback storage (uploads on read-only filesystems like Vercel):
+  // when the image file can't be written to disk it is kept base64-encoded here.
+  dataBase64   String?
   createdAt    DateTime     @default(now())
   predictions  Prediction[]
 }

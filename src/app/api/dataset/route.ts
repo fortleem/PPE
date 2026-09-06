@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { annotateImage } from "@/lib/vlm";
 import { COMBOS, comboOf } from "@/lib/ppe";
 import { DATA_DIR } from "@/lib/serverPaths";
+import { setMemoryImage } from "@/lib/imageStore";
 
 export const dynamic = "force-dynamic";
 
@@ -96,8 +97,18 @@ export async function POST(request: Request) {
 
         const id = `up_${crypto.randomBytes(6).toString("hex")}`;
         const filename = `${id}.jpg`;
-        await fs.mkdir(DATA_DIR, { recursive: true });
-        await fs.writeFile(path.join(DATA_DIR, filename), normalized);
+
+        // Persist the file: on disk when possible, otherwise base64 in the DB
+        // (serverless filesystems like Vercel are read-only outside /tmp).
+        let dataBase64: string | null = null;
+        try {
+          await fs.mkdir(DATA_DIR, { recursive: true });
+          await fs.writeFile(path.join(DATA_DIR, filename), normalized);
+        } catch {
+          dataBase64 = normalized.toString("base64");
+        }
+        // make the bytes available to the annotator within this request
+        setMemoryImage(filename, normalized);
 
         const meta = await sharp(normalized).metadata();
         const gt = await annotateImage(path.join(DATA_DIR, filename));
@@ -117,6 +128,7 @@ export async function POST(request: Request) {
             width: meta.width ?? null,
             height: meta.height ?? null,
             size: normalized.byteLength,
+            dataBase64,
           },
         });
         created.push({

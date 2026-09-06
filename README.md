@@ -40,7 +40,7 @@ Fixed stratified test split, fair comparison across modes (the "model" is a visi
 
 ## Tech stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Prisma + SQLite · **z-ai-web-dev-sdk** (vision LLM for annotation & classification, text LLM for error analysis & report) · sharp (image pipeline + icon generation) · recharts · react-markdown + remark-gfm · PWA service worker.
+Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Prisma + SQLite (local) / Turso libsql (production, driver adapter) · **z-ai-web-dev-sdk** (vision LLM for annotation & classification, text LLM for error analysis & report) · sharp (image pipeline + icon generation) · recharts · react-markdown + remark-gfm · PWA service worker.
 
 ## Run locally
 
@@ -58,6 +58,22 @@ Optional scripts:
 bun scripts/collect-dataset.ts   # re-collect + annotate dataset (resumable, rate-limited)
 bun scripts/gen-pwa-icons.ts     # regenerate PWA icons from public/logo.svg
 bun run lint
+```
+
+## Production deployment (Vercel + Turso)
+
+The app is deployed at **https://ppe-smart.vercel.app** (connected to this repository via the Vercel GitHub integration) with **Turso** (libsql) as the remote database:
+
+- `DATABASE_URL` = `libsql://…turso.io` and `TURSO_AUTH_TOKEN` switch the Prisma client to the **libsql driver adapter** automatically (no code change between local and production).
+- Dataset images ship in `public/dataset/` and are served from the CDN; image lookups degrade gracefully: local file → in-memory → DB base64 → static CDN.
+- The AI SDK config is injected at runtime via the `ZAI_CONFIG_JSON` env var (materialized to `/tmp/.z-ai-config` on serverless).
+- Uploads on the read-only serverless filesystem are stored base64-encoded in the database.
+
+```bash
+# seed the remote database from the local file DB
+bunx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > data/tmp/turso-schema.sql
+DATABASE_URL="libsql://…" TURSO_AUTH_TOKEN="…" bun scripts/turso-setup.ts    # schema + data
+DATABASE_URL="libsql://…" TURSO_AUTH_TOKEN="…" bun scripts/turso-check.ts    # verify via the adapter
 ```
 
 ## Install as an app — no store needed
