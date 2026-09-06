@@ -12,7 +12,7 @@ Fixed stratified test split, fair comparison across modes (the "model" is a visi
 
 | Mode | Context examples | Test n | Exact match | Helmet acc | Vest acc | Macro-F1 | Latency p50 |
 |---|---|---|---|---|---|---|---|
-| Zero-shot | 0 | 18 | 94.4 % | 100 % | 94.4 % | **0.970** | ~1.4 s |
+| Zero-shot | 0 | 19 | 94.7 % | 100 % | 94.7 % | **0.971** | ~1.4 s |
 | Few-shot | 8 (2 per class) | 19 | 94.7 % | 100 % | 94.7 % | **0.971** | ~2.5 s |
 | Many-shot | 24 (6 per class) | 19 | 94.7 % | 100 % | 94.7 % | **0.971** | ~4.6 s |
 
@@ -20,7 +20,7 @@ Fixed stratified test split, fair comparison across modes (the "model" is a visi
 
 - The **helmet attribute is classified perfectly** on the test set in all three modes.
 - The **single residual error is the same image in every mode**: an orange *non-reflective* jacket predicted as a hi-vis vest. The automated error analysis labels it **`label_noise`** (ground-truth issue, not a model issue) — it can be corrected in one click from the Dataset tab.
-- **Few vs many:** adding examples beyond 8 brought **no measurable gain** on this test set (ceiling effect with 19 test images); even zero-shot is near ceiling. Latency, however, **grows with context size** (more in-prompt images), and the many-shot average is skewed by one rate-limit retry outlier (p95 ≈ 311 s).
+- **Few vs many:** on this test set all three modes converge to the **same scores** (ceiling effect with 19 test images) — context examples brought no measurable accuracy gain over zero-shot, while **latency grows with context size** (more in-prompt images); the many-shot average is further skewed by one rate-limit retry outlier (p95 ≈ 311 s).
 - Full metrics (per-class precision/recall/F1, 2×2 and 4×4 confusion matrices, latency percentiles, per-error explanations) are in the app under **التجارب** and **تحليل الأخطاء**, and the complete Arabic technical report under **التقرير التقني**.
 
 ## How it works

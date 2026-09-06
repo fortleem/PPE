@@ -64,3 +64,8 @@ server.log
 /Caddyfile
 /data/tmp/
 /.z-ai-config/
+
+# sqlite sidecar files
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
