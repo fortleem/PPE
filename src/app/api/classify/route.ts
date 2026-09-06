@@ -1,4 +1,3 @@
-import path from "path";
 import { db } from "@/lib/db";
 import { EXPERIMENT_MODES, MODE_CONFIG, type ExperimentMode } from "@/lib/ppe";
 import { DATA_DIR } from "@/lib/serverPaths";
@@ -23,11 +22,21 @@ export async function POST(request: Request) {
 
     const examples = await selectContextExamples(mode);
     const result = await classifyImage(
-      path.join(DATA_DIR, img.filename),
+      img.filename,
       examples.map(({ filePath, helmet, vest }) => ({ filePath, helmet, vest })),
       mode
     );
-    if (!result) return Response.json({ error: "فشل استدعاء النموذج — حاول مرة أخرى" }, { status: 502 });
+    if (!result) {
+      return Response.json(
+        {
+          error: "فشل استدعاء النموذج",
+          message: process.env.VERCEL
+            ? "خدمة الذكاء الاصطناعي تعمل داخل بيئة التطوير فقط وغير متاحة من هذا النشر"
+            : "فشل استدعاء النموذج — حاول مرة أخرى",
+        },
+        { status: 502 }
+      );
+    }
 
     const helmetCorrect = img.hasHelmet !== null ? result.helmet === img.hasHelmet : null;
     const vestCorrect = img.hasVest !== null ? result.vest === img.hasVest : null;

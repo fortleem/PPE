@@ -4,7 +4,20 @@ import ZAI from "z-ai-web-dev-sdk";
 import { MODE_CONFIG, type ExperimentMode } from "./ppe";
 import { readImageBuffer } from "./imageStore";
 
-const RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 90_000, 150_000];
+/** Sentinel: the AI endpoint is not reachable from this runtime (e.g. serverless). */
+export const AI_UNREACHABLE = "AI_SERVICE_UNREACHABLE";
+
+function retryDelays(): number[] {
+  const raw = process.env.ZAI_RETRY_DELAYS_MS;
+  if (raw) {
+    return raw
+      .split(",")
+      .map((s) => parseInt(s, 10))
+      .filter((n) => Number.isFinite(n) && n >= 0);
+  }
+  return [5_000, 15_000, 45_000, 90_000, 150_000];
+}
+const RETRY_DELAYS_MS = retryDelays();
 
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -18,6 +31,8 @@ async function retryWithBackoff<T>(
       console.warn(`[${label}] attempt ${attempt}: invalid response`);
     } catch (err) {
       const msg = (err as Error).message;
+      // network-unreachable — retrying can never succeed, fail immediately
+      if (msg === AI_UNREACHABLE) return null;
       console.warn(`[${label}] attempt ${attempt} failed: ${msg.slice(0, 160)}`);
     }
     if (attempt < RETRY_DELAYS_MS.length) {
@@ -29,6 +44,18 @@ async function retryWithBackoff<T>(
 
 // Cached SDK instance (backend only — never import from client components)
 let zaiPromise: Promise<Awaited<ReturnType<typeof ZAI.create>>> | null = null;
+
+/** On serverless, verify the AI endpoint is reachable before any call. */
+async function assertZaiReachable(baseUrl: string | undefined): Promise<void> {
+  if (!process.env.VERCEL || !baseUrl) return;
+  try {
+    // any HTTP response (even 404) proves connectivity; a network error does not
+    await fetch(baseUrl, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(8_000) });
+  } catch {
+    throw new Error(AI_UNREACHABLE);
+  }
+}
+
 export async function getZAI() {
   if (!zaiPromise) {
     zaiPromise = (async () => {
@@ -43,6 +70,12 @@ export async function getZAI() {
           await writeFile("/tmp/.z-ai-config", envConfig);
         } catch {
           /* fall through to the file-based lookup */
+        }
+        try {
+          await assertZaiReachable(JSON.parse(envConfig).baseUrl);
+        } catch {
+          // surface the sentinel through the cached promise so every caller fails fast
+          throw new Error(AI_UNREACHABLE);
         }
       }
       return ZAI.create();
