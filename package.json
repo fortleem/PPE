@@ -1,6 +1,7 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.1",
+  "name": "ppe-detector",
+  "version": "1.0.0",
+  "description": "PPE safety-equipment detection system (Helmet / Vest) — dataset, experiments, error analysis, technical report, and installable PWA.",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",

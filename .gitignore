@@ -52,3 +52,15 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# sandbox-internal / not part of the published project
+/worklog.md
+/agent-ctx/
+/tests/
+/.zscripts/
+/examples/
+/mini-services/
+/download/
+/Caddyfile
+/data/tmp/
+/.z-ai-config/
