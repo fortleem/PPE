@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Real web-collected dataset image with 2 ground-truth binary attributes
+// (helmet, vest) that together form the 4 classes:
+// Helmet / No Helmet / Safety Vest / No Vest
+model DatasetImage {
+  id           String       @id @default(cuid())
+  filename     String       @unique // file inside data/dataset/
+  url          String? // original web URL
+  theme        String? // collection theme: helmet | no_helmet | safety_vest | no_vest
+  sourceQuery  String?
+  source       String       @default("web") // web | upload
+  hasHelmet    Boolean?
+  hasVest      Boolean?
+  gtNotes      String?
+  gtConfidence String? // high | medium | low
+  gtFlags      String? // JSON array of intent-conflict flags
+  split        String       @default("train") // train | test | none
+  width        Int?
+  height       Int?
+  size         Int?
+  createdAt    DateTime     @default(now())
+  predictions  Prediction[]
+}
+
+// One model prediction of one test image inside one experiment
+model Prediction {
+  id             String       @id @default(cuid())
+  experimentId   String
+  experiment     Experiment   @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  imageId        String
+  image          DatasetImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  predHelmet     Boolean
+  predVest       Boolean
+  helmetCorrect  Boolean
+  vestCorrect    Boolean
+  correct        Boolean // both attributes correct
+  reasoning      String?
+  latencyMs      Int?
+  helmetErrorCat String? // error category when helmetCorrect = false
+  vestErrorCat   String? // error category when vestCorrect = false
+  createdAt      DateTime     @default(now())
+
+  @@unique([experimentId, imageId])
+}
+
+// An evaluation run: mode = zero_shot | few_shot | many_shot
+model Experiment {
+  id              String       @id @default(cuid())
+  name            String
+  mode            String
+  examplesPerClass Int         @default(0)
+  contextImageIds String? // JSON array of in-context example image ids
+  testImageIds    String? // JSON array of evaluated test image ids
+  status          String       @default("pending") // pending | running | done | error
+  progress        Int          @default(0)
+  total           Int          @default(0)
+  currentImageId  String?
+  error           String?
+  metricsJson     String?
+  errorSummary    String? // JSON: { categories: [...], summaryAr: string }
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  predictions     Prediction[]
+}
+
+// Generated technical report (Arabic markdown)
+model Report {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+}
