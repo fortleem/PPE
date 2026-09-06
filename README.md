@@ -2,6 +2,8 @@
 
 An end-to-end **PPE (Personal Protective Equipment) compliance detection system**: it classifies workers in real photos into the four classes **Helmet / No Helmet / Safety Vest / No Vest**, ships with a **real collected dataset (111 images)**, runs **zero-shot vs few-shot vs many-shot experiments**, performs **automatic error-cause analysis**, generates an **Arabic technical report**, and installs as an app on **Android and iOS without any app store** (PWA).
 
+> **Live deployment:** https://ppe-smart.vercel.app (Vercel + Turso) — screenshots in [`docs/screenshots/`](docs/screenshots).
+
 > نظام متكامل يكشف التزام معدات السلامة (خوذة / سديري) في صور حقيقية، مع داتاسيت مجمّعة من الويب، ومقارنة أداء بين عدد قليل وكبير من الأمثلة، وتحليل لأسباب الأخطاء، وتقرير تقني بالعربية — وقابل للتثبيت على الجوال بدون متجر تطبيقات.
 
 ---
